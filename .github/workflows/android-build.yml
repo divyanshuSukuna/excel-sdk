@@ -32,9 +32,22 @@ jobs:
           gradle-version: 8.10.2
 
       - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+        shell: bash
+        run: |
+          set +e
+          gradle :app:assembleDebug --stacktrace --info 2>&1 | tee build-log.txt
+          status=${PIPESTATUS[0]}
+          exit "$status"
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SheetForge-build-log
+          path: build-log.txt
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SheetForge-debug-apk

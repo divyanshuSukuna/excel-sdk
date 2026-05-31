@@ -131,7 +131,7 @@ class MainActivity : Activity(), SpreadsheetView.Listener {
         addView(nameBox, LinearLayout.LayoutParams(dp(72), dp(42)))
 
         formulaBar = EditText(context).apply {
-            singleLine = true
+            setSingleLine(true)
             textSize = 15f
             setTextColor(Palette.text)
             setHintTextColor(Palette.textMuted)
@@ -248,7 +248,7 @@ class MainActivity : Activity(), SpreadsheetView.Listener {
     private fun showCsvDialog() {
         val exportText = workbook.activeSheet.toCsv(grid.selection.normalized())
         val input = EditText(this).apply {
-            minLines = 8
+            setMinLines(8)
             gravity = Gravity.TOP
             setText(exportText)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -500,7 +500,7 @@ class SpreadsheetView(
         val input = EditText(context).apply {
             setText(cell.raw)
             setSelection(text.length)
-            singleLine = true
+            setSingleLine(true)
         }
         AlertDialog.Builder(context)
             .setTitle(cellRef.label())
