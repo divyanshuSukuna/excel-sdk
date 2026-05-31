@@ -649,8 +649,13 @@ data class Sheet(
         }
         cells.forEach { (ref, cell) ->
             if (cell.raw.trim().startsWith("=")) {
-                val result = FormulaEngine(this, workbook).evaluate(ref, cell.raw.drop(1))
-                cell.display = result.fold({ it.short() }, { err -> cell.error = err.message ?: "Formula error"; "#ERR" })
+                when (val result = FormulaEngine(this).evaluate(ref, cell.raw.drop(1))) {
+                    is FormulaValue.Success -> cell.display = result.value.short()
+                    is FormulaValue.Failure -> {
+                        cell.error = result.message
+                        cell.display = "#ERR"
+                    }
+                }
             } else {
                 cell.display = cell.raw
             }
@@ -738,18 +743,24 @@ data class CellRange(val start: CellRef, val end: CellRef) {
     fun cells(): List<CellRef> = (top..bottom).flatMap { r -> (left..right).map { c -> CellRef(r, c) } }
 }
 
-class FormulaEngine(private val sheet: Sheet, private val workbook: Workbook) {
+class FormulaEngine(private val sheet: Sheet) {
     private lateinit var text: String
     private var pos = 0
     private val visiting = mutableSetOf<CellRef>()
 
-    fun evaluate(origin: CellRef, expression: String): Result<Double> = runCatching {
-        text = expression.replace(" ", "")
-        pos = 0
-        visiting.add(origin)
-        val value = parseExpression()
-        visiting.remove(origin)
-        value
+    fun evaluate(origin: CellRef, expression: String): FormulaValue {
+        return try {
+            text = expression.replace(" ", "")
+            pos = 0
+            visiting.add(origin)
+            val value = parseExpression()
+            visiting.remove(origin)
+            FormulaValue.Success(value)
+        } catch (error: IllegalStateException) {
+            FormulaValue.Failure(error.message ?: "Formula error")
+        } catch (error: NumberFormatException) {
+            FormulaValue.Failure(error.message ?: "Formula error")
+        }
     }
 
     private fun parseExpression(): Double {
@@ -819,7 +830,10 @@ class FormulaEngine(private val sheet: Sheet, private val workbook: Workbook) {
         val cell = sheet.cell(ref)
         return if (cell.raw.trim().startsWith("=")) {
             visiting.add(ref)
-            val value = FormulaEngine(sheet, workbook).evaluate(ref, cell.raw.drop(1)).getOrElse { 0.0 }
+            val value = when (val result = FormulaEngine(sheet).evaluate(ref, cell.raw.drop(1))) {
+                is FormulaValue.Success -> result.value
+                is FormulaValue.Failure -> 0.0
+            }
             visiting.remove(ref)
             value
         } else {
@@ -843,6 +857,11 @@ class FormulaEngine(private val sheet: Sheet, private val workbook: Workbook) {
         while (peek() != null && peek() != ch) pos++
         return text.substring(start, pos)
     }
+}
+
+sealed class FormulaValue {
+    data class Success(val value: Double) : FormulaValue()
+    data class Failure(val message: String) : FormulaValue()
 }
 
 class UndoStack {
