@@ -28,4 +28,9 @@ From a configured terminal with Android SDK and Gradle available:
 gradle :app:assembleDebug
 ```
 
+## Build with GitHub Actions
+
+Push this repo to GitHub, then open `Actions > Android Build > Run workflow`.
+The workflow installs Java, Android SDK tooling, and Gradle 8.10.2 in GitHub's cloud runner, builds `:app:assembleDebug`, and uploads the APK as `SheetForge-debug-apk`.
+
 The current sandbox did not expose a usable Gradle/Android SDK toolchain, so the project has been created but not compiled in this environment.
